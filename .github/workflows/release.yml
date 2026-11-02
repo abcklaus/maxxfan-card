@@ -1,0 +1,24 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Version aus Tag übernehmen
+        run: npm version --no-git-tag-version "${GITHUB_REF_NAME#v}" --allow-same-version
+      - run: npm run build
+      - name: Datei an Release anhängen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/maxxfan-card.js --clobber

@@ -1,0 +1,10 @@
+{
+  "name": "maxxfan-card",
+  "version": "1.0.0",
+  "description": "Home Assistant Lovelace-Karte zur Steuerung eines Maxxfan-Dachlüfters über MQTT",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  },
+  "license": "MIT"
+}

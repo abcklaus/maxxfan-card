@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maxxfan Card – Demo</title>
+  <style>
+    :root {
+      --primary-background-color: #fafafa;
+      --card-background-color: #ffffff;
+      --primary-text-color: #212121;
+      --secondary-text-color: #727272;
+      --primary-color: #03a9f4;
+      --divider-color: #e0e0e0;
+    }
+    :root[data-theme="dark"] {
+      --primary-background-color: #111111;
+      --card-background-color: #1c1c1c;
+      --primary-text-color: #e1e1e1;
+      --secondary-text-color: #9b9b9b;
+      --divider-color: #333333;
+    }
+    body {
+      margin: 0;
+      padding: 24px 16px;
+      background: var(--primary-background-color);
+      color: var(--primary-text-color);
+      font-family: Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    main { max-width: 760px; margin: 0 auto; }
+    h1 { font-size: 1.4em; font-weight: 500; }
+    .controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 16px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+    pre { font-size: 12px; max-height: 200px; overflow: auto; background: var(--card-background-color); padding: 8px; border: 1px solid var(--divider-color); }
+  </style>
+  <script>
+    // Minimal stand-in for Home Assistant's <ha-card> und <ha-icon>
+    customElements.define("ha-card", class extends HTMLElement {
+      connectedCallback() {
+        Object.assign(this.style, {
+          display: "block",
+          background: "var(--card-background-color)",
+          borderRadius: "12px",
+          border: "1px solid var(--divider-color)",
+        });
+      }
+    });
+    const ICONS = {
+      "mdi:fan": "🌀", "mdi:fan-off": "⭘", "mdi:fan-auto": "Ⓐ", "mdi:fan-alert": "⚠",
+      "mdi:minus": "−", "mdi:plus": "+", "mdi:speedometer": "⏲", "mdi:thermometer": "🌡",
+      "mdi:import": "↓", "mdi:export": "↑", "mdi:window-shutter": "▭", "mdi:window-shutter-open": "⌂",
+    };
+    customElements.define("ha-icon", class extends HTMLElement {
+      static get observedAttributes() { return ["icon"]; }
+      attributeChangedCallback() { this.textContent = ICONS[this.getAttribute("icon")] ?? "•"; }
+      connectedCallback() { this.style.display = "inline-flex"; this.style.justifyContent = "center"; this.style.minWidth = "1.2em"; this.attributeChangedCallback(); }
+    });
+  </script>
+  <script src="../dist/maxxfan-card.js"></script>
+</head>
+<body>
+<main>
+  <h1>Maxxfan Card – Demo</h1>
+  <div class="controls">
+    <label><input id="dark" type="checkbox"> Dunkles Theme</label>
+    <label><input id="unavailable" type="checkbox"> Gerät nicht verfügbar</label>
+  </div>
+  <div class="cards">
+    <maxxfan-card id="card"></maxxfan-card>
+    <div>
+      <strong>Gesendete Service-Calls</strong>
+      <pre id="log"></pre>
+    </div>
+  </div>
+</main>
+<script>
+  // Simuliertes Gerät: reagiert auf die Toggle-Topics wie der Maxxfan
+  // Startzustand per URL, z. B. ?mode=Auto&dir=in&dark=1
+  const params = new URLSearchParams(location.search);
+  const startMode = params.get("mode") || "Manuell";
+  const dev = {
+    mode: startMode,
+    power: startMode !== "Aus",
+    speed: 3,
+    dir: params.get("dir") || "out",
+    vent: startMode === "Aus" ? "close" : "open",
+    temp: 26,
+  };
+  if (params.get("dark")) {
+    document.documentElement.dataset.theme = "dark";
+    document.getElementById("dark").checked = true;
+  }
+  const card = document.getElementById("card");
+  const log = document.getElementById("log");
+
+  function states() {
+    if (document.getElementById("unavailable").checked) return {};
+    const st = (state, attributes = {}) => ({ state, attributes });
+    return {
+      "sensor.maxxfan_modus": st(dev.mode),
+      "fan.maxxfan": st(dev.power ? "on" : "off", { percentage: dev.speed * 10, percentage_step: 10 }),
+      "number.maxxfan_zieltemperatur": st(String(dev.temp), { min: 15, max: 37, step: 1, unit_of_measurement: "°C" }),
+      "sensor.maxxfan_richtung_status": st(dev.dir),
+      "sensor.maxxfan_dachluke_status": st(dev.vent),
+      "sensor.maxxfan_auto_status": st(dev.mode === "Auto" ? "True" : "False"),
+    };
+  }
+
+  function push() {
+    card.hass = { language: "de", locale: { language: "de" }, states: states(), callService };
+  }
+
+  function later(fn) { setTimeout(() => { fn(); push(); }, 600); }
+
+  function callService(domain, service, data, target) {
+    log.textContent = `${domain}.${service} ${JSON.stringify({ ...data, ...target })}\n` + log.textContent;
+    if (domain === "mqtt") {
+      const topic = data.topic.split("/").pop();
+      later(() => {
+        if (topic === "power") {
+          if (dev.mode === "Aus") { dev.mode = "Manuell"; dev.power = true; }
+          else { dev.mode = "Aus"; dev.power = false; dev.vent = "close"; }
+        }
+        if (topic === "auto") {
+          dev.mode = dev.mode === "Auto" ? "Manuell" : "Auto";
+          dev.power = true; dev.vent = "open";
+        }
+        if (topic === "direction") dev.dir = dev.dir === "out" ? "in" : "out";
+        if (topic === "vent") dev.vent = dev.vent === "open" ? "close" : "open";
+      });
+    }
+    if (domain === "fan") later(() => { dev.speed = data.percentage / 10; });
+    if (domain === "number") later(() => { dev.temp = data.value; });
+    return Promise.resolve();
+  }
+
+  card.setConfig({ type: "custom:maxxfan-card" });
+  push();
+  document.getElementById("unavailable").addEventListener("change", push);
+  document.getElementById("dark").addEventListener("change", (e) => {
+    document.documentElement.dataset.theme = e.target.checked ? "dark" : "light";
+  });
+</script>
+</body>
+</html>
