@@ -5,9 +5,10 @@ der per MQTT angebunden ist. Die Karte kommt ohne Template-Switches und ohne
 Skripte aus: Sie liest die MQTT-Entitäten und sendet Kommandos direkt per
 `mqtt.publish` bzw. an die MQTT-Entitäten für Drehzahl und Zieltemperatur.
 
-Oben zeigt eine Grafik das Dach im Schnitt: Die Haube hebt sich animiert, der
-Rotor dreht (im Modus Manuell abhängig von der Stufe) und Pfeile zeigen den
-Luftstrom – orange nach draußen, blau nach drinnen.
+Oben zeigt eine vereinfachte Seitenansicht den Lüfter auf dem Dach: Die
+dunkle Haube hebt sich animiert samt weißer Seitenschürze, und animierte
+Linien zeigen den Luftstrom durch die Öffnung – orange nach draußen, blau nach
+drinnen (im Modus Manuell umso schneller, je höher die Stufe).
 
 ![Vorschau](images/preview.png)
 

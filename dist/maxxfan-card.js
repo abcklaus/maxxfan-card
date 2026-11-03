@@ -55,6 +55,8 @@ const LABELS = {
     vent_open: "Offen",
     vent_closed: "Zu",
     target: "Ziel",
+    outside: "außen",
+    inside: "innen",
     unavailable: "nicht verfügbar",
   },
   en: {
@@ -69,57 +71,60 @@ const LABELS = {
     vent_open: "Open",
     vent_closed: "Closed",
     target: "Target",
+    outside: "outside",
+    inside: "inside",
     unavailable: "unavailable",
   },
 };
 
 const MODE_ICONS = { off: "mdi:fan-off", manual: "mdi:fan", auto: "mdi:fan-auto" };
 
-// Seitenansicht: Dach im Schnitt, Haube am linken Scharnier, Rotor perspektivisch
+// Seitenansicht nach Foto: Haube mit Scharnier links (104/96), öffnet um 24°.
+// Die Schürze ist so bemessen, dass ihre Unterkante bei 24° auf der
+// Gehäuseoberkante (y = 96) liegt; der clipPath blendet sie darunter aus.
 const DIAGRAM = `
-  <svg class="diagram" viewBox="0 0 400 166" role="img" aria-hidden="true">
-    <!-- Luftstrom (liegt hinter Haube und Dach) -->
+  <svg class="diagram" viewBox="0 0 400 176" role="img" aria-hidden="true">
+    <defs>
+      <clipPath id="mf-above"><rect x="0" y="0" width="400" height="96"/></clipPath>
+    </defs>
+    <text x="16" y="24" class="caption">{outside}</text>
+    <text x="16" y="164" class="caption">{inside}</text>
+
+    <!-- Luftstrom (liegt hinter Haube, Gehäuse und Dach) -->
     <g class="flow">
-      <path d="M165 158 V106 Q165 80 215 72 T300 62"/>
-      <path d="M200 158 V106 Q200 90 245 88 T310 84"/>
-      <path d="M235 158 V106 Q235 100 270 100 T320 100"/>
+      <path class="base" d="M176 172 V100 Q176 40 236 40 H370"/>
+      <path class="base" d="M200 172 V100 Q200 60 240 60 H370"/>
+      <path class="base" d="M224 172 V100 Q224 80 244 80 H370"/>
+      <path class="dash" d="M176 172 V100 Q176 40 236 40 H370"/>
+      <path class="dash" d="M200 172 V100 Q200 60 240 60 H370"/>
+      <path class="dash" d="M224 172 V100 Q224 80 244 80 H370"/>
       <g class="heads out">
-        <path d="M293 55 L302 62 L294 70"/>
-        <path d="M303 77 L312 84 L303 91"/>
-        <path d="M313 93 L322 100 L313 107"/>
+        <path d="M363 33 L372 40 L363 47"/>
+        <path d="M363 53 L372 60 L363 67"/>
+        <path d="M363 73 L372 80 L363 87"/>
       </g>
       <g class="heads in">
-        <path d="M158 150 L165 159 L172 150"/>
-        <path d="M193 150 L200 159 L207 150"/>
-        <path d="M228 150 L235 159 L242 150"/>
+        <path d="M169 163 L176 172 L183 163"/>
+        <path d="M193 163 L200 172 L207 163"/>
+        <path d="M217 163 L224 172 L231 163"/>
       </g>
     </g>
 
-    <!-- Dach -->
-    <rect class="roof" x="0" y="106" width="124" height="12"/>
-    <rect class="roof" x="276" y="106" width="124" height="12"/>
-    <rect class="lining" x="0" y="118" width="124" height="4"/>
-    <rect class="lining" x="276" y="118" width="124" height="4"/>
-
-    <!-- Lüftergehäuse -->
-    <rect class="frame" x="118" y="102" width="12" height="34" rx="2"/>
-    <rect class="frame" x="270" y="102" width="12" height="34" rx="2"/>
-    <rect class="garnish" x="110" y="134" width="180" height="6" rx="3"/>
-    <g transform="translate(200 118) scale(1 0.22)">
-      <g class="rotor">
-        <ellipse class="blade" cx="0" cy="-34" rx="14" ry="32"/>
-        <ellipse class="blade" cx="0" cy="34" rx="14" ry="32"/>
-        <ellipse class="blade" cx="-34" cy="0" rx="32" ry="14"/>
-        <ellipse class="blade" cx="34" cy="0" rx="32" ry="14"/>
-        <circle class="hub" cx="0" cy="0" r="12"/>
+    <!-- Haube mit Seitenschürze -->
+    <g clip-path="url(#mf-above)">
+      <g class="lid">
+        <path class="skirt" d="M104 96 L270 96 L270 170 Z"/>
+        <path class="lid-body" d="M100 96 L100 90 Q102 82 114 81 L288 78 Q301 78 302 88 L302 96 Z"/>
+        <path class="lid-shine" d="M118 85 L286 82"/>
+        <text x="200" y="93" class="logo"><tspan class="maxx">MAXX</tspan><tspan class="fan">FAN</tspan></text>
       </g>
     </g>
 
-    <!-- Haube (Scharnier links bei 120/102) -->
-    <g class="lid">
-      <path class="lid-body" d="M120 102 L120 96 Q200 80 280 96 L280 102 Z"/>
-      <circle class="hinge" cx="122" cy="100" r="3"/>
-    </g>
+    <!-- Gehäuse, Grundplatte, Dach -->
+    <rect class="housing" x="106" y="96" width="186" height="14" rx="2"/>
+    <rect class="plate" x="92" y="110" width="216" height="6" rx="2"/>
+    <rect class="roof" x="0" y="116" width="400" height="14"/>
+    <rect class="lining" x="0" y="130" width="400" height="3"/>
   </svg>`;
 
 class MaxxfanCard extends HTMLElement {
@@ -367,6 +372,7 @@ class MaxxfanCard extends HTMLElement {
         <ha-icon></ha-icon>
         <span class="tile-text"><span class="tile-label">${this._t(key)}</span><span class="tile-state">—</span></span>
       </button>`;
+    const diagram = DIAGRAM.replace(/\{(\w+)\}/g, (_, k) => escapeHtml(this._t(k)));
 
     this.shadowRoot.innerHTML = `
       <style>${STYLES}</style>
@@ -376,7 +382,7 @@ class MaxxfanCard extends HTMLElement {
           <span class="title">${escapeHtml(c.name || "")}</span>
           <span class="badge"><span class="dot"></span><span class="badge-text">—</span></span>
         </div>
-        ${c.show_diagram !== false ? DIAGRAM : ""}
+        ${c.show_diagram !== false ? diagram : ""}
         <div class="status"></div>
         <div class="modes">${MODES.map(modeBtn).join("")}</div>
         <div class="controls">
@@ -492,9 +498,7 @@ class MaxxfanCard extends HTMLElement {
     const running = !!speed?.on && mode !== "off";
     // Manuell: Tempo nach Stufe; Auto: festes Tempo
     const ratio = mode === "manual" && level ? level / speed.max : 0.5;
-    svg.style.setProperty("--spin", `${(1.6 - ratio * 1.3).toFixed(2)}s`);
     svg.style.setProperty("--flow", `${(2.4 - ratio * 1.8).toFixed(2)}s`);
-    svg.classList.toggle("running", running);
     svg.classList.toggle("open", !!vent);
     svg.classList.toggle("flowing", running && !!vent);
     svg.dataset.dir = dir || "out";
@@ -616,40 +620,37 @@ const STYLES = `
 
   /* ---- Grafik ---- */
   .diagram { display: block; width: 100%; max-width: 420px; margin: 4px auto 0; padding: 0 12px; box-sizing: border-box; cursor: pointer; }
-  .roof { fill: color-mix(in srgb, var(--primary-text-color) 55%, transparent); }
+  .caption { font-size: 12px; font-weight: 600; fill: var(--secondary-text-color); }
+  .roof { fill: #9aa0a6; }
   .lining { fill: var(--maxxfan-muted); }
-  .frame { fill: color-mix(in srgb, var(--primary-text-color) 40%, transparent); }
-  .garnish { fill: color-mix(in srgb, var(--primary-text-color) 25%, transparent); }
-  .blade { fill: color-mix(in srgb, var(--primary-text-color) 45%, transparent); }
-  .hub { fill: color-mix(in srgb, var(--primary-text-color) 70%, transparent); }
-  .rotor { transform-origin: 0 0; }
-  .running .rotor { animation: spin var(--spin, 1s) linear infinite; }
-  .running .blade { fill: color-mix(in srgb, var(--maxxfan-active) 60%, transparent); }
+  .plate { fill: #d5d8db; stroke: #a9aeb3; stroke-width: 1; }
+  .housing, .skirt { fill: #f3f4f5; stroke: #b0b5ba; stroke-width: 1.5; stroke-linejoin: round; }
+  .skirt { fill: #e6e8ea; }
 
-  .lid { transform-box: view-box; transform-origin: 122px 100px; transition: transform .9s ease-in-out; }
-  .open .lid { transform: rotate(-35deg); }
-  .lid-body {
-    fill: color-mix(in srgb, var(--primary-text-color) 12%, var(--card-background-color, #fff));
-    stroke: color-mix(in srgb, var(--primary-text-color) 60%, transparent); stroke-width: 2; stroke-linejoin: round;
-  }
-  .open .lid-body { stroke: var(--maxxfan-open); }
-  .hinge { fill: color-mix(in srgb, var(--primary-text-color) 60%, transparent); }
+  .lid { transform-box: view-box; transform-origin: 104px 96px; transition: transform .9s ease-in-out; }
+  .open .lid { transform: rotate(-24deg); }
+  .lid-body { fill: #202428; stroke: #555c63; stroke-width: 1.5; stroke-linejoin: round; }
+  .lid-shine { fill: none; stroke: rgba(255,255,255,.35); stroke-width: 2; stroke-linecap: round; }
+  .logo { font-size: 9px; font-weight: 800; font-style: italic; text-anchor: middle; }
+  .maxx { fill: #e53935; }
+  .fan { fill: #4f7cff; }
 
   .flow { --c: var(--maxxfan-out); opacity: 0; transition: opacity .4s; }
   .diagram[data-dir="in"] .flow { --c: var(--maxxfan-in); }
   .flowing .flow { opacity: 1; }
-  .flow path { fill: none; stroke: var(--c); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-  .flow > path { stroke-dasharray: 4 10; animation: flow var(--flow, 1.5s) linear infinite; }
-  .diagram[data-dir="in"] .flow > path { animation-direction: reverse; }
+  .flow path { fill: none; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+  .flow .base { stroke: color-mix(in srgb, var(--c) 30%, transparent); }
+  .flow .dash { stroke: var(--c); stroke-dasharray: 3 11; animation: flow var(--flow, 1.5s) linear infinite; }
+  .diagram[data-dir="in"] .flow .dash { animation-direction: reverse; }
+  .heads path { stroke: var(--c); }
   .heads { display: none; }
   .diagram[data-dir="out"] .heads.out, .diagram[data-dir="in"] .heads.in { display: inline; }
 
   ha-card[data-mode="off"] .diagram, ha-card[data-mode="unavailable"] .diagram { opacity: .6; }
-  @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes flow { to { stroke-dashoffset: -14; } }
   @keyframes pulse { 50% { opacity: .45; } }
   @media (prefers-reduced-motion: reduce) {
-    .running .rotor, .flow > path { animation: none; }
+    .flow .dash { animation: none; stroke-dasharray: none; }
     .lid { transition: none; }
   }
 
