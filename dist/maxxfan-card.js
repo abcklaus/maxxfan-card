@@ -83,9 +83,9 @@ const MODE_ICONS = { off: "mdi:fan-off", manual: "mdi:fan", auto: "mdi:fan-auto"
 // Die Schürze ist so bemessen, dass ihre Unterkante bei 24° auf der
 // Gehäuseoberkante (y = 96) liegt; der clipPath blendet sie darunter aus.
 const DIAGRAM = `
-  <svg class="diagram" viewBox="0 0 400 176" role="img" aria-hidden="true">
+  <svg class="diagram" viewBox="0 -10 400 186" role="img" aria-hidden="true">
     <defs>
-      <clipPath id="mf-above"><rect x="0" y="0" width="400" height="96"/></clipPath>
+      <clipPath id="mf-above"><rect x="0" y="-14" width="400" height="110"/></clipPath>
     </defs>
     <text x="16" y="24" class="caption">{outside}</text>
     <text x="16" y="164" class="caption">{inside}</text>
@@ -114,9 +114,9 @@ const DIAGRAM = `
     <g clip-path="url(#mf-above)">
       <g class="lid">
         <path class="skirt" d="M104 96 L270 96 L270 170 Z"/>
-        <path class="lid-body" d="M100 96 L100 90 Q102 82 114 81 L288 78 Q301 78 302 88 L302 96 Z"/>
-        <path class="lid-shine" d="M118 85 L286 82"/>
-        <text x="200" y="93" class="logo"><tspan class="maxx">MAXX</tspan><tspan class="fan">FAN</tspan></text>
+        <path class="lid-body" d="M100 96 L100 90 C125 58 255 54 294 74 Q308 82 302 96 Z"/>
+        <path class="lid-shine" d="M114 86 C140 64 250 60 286 74"/>
+        <text x="215" y="86" class="logo"><tspan class="maxx">MAXX</tspan><tspan class="fan">FAN</tspan></text>
       </g>
     </g>
 
